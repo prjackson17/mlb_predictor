@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/data/team_stats.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/data/venue_park_factors.csv">
           <value>
             <Attribute>
@@ -17,7 +24,7 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="/team_stats.csv">
+        <entry key="/projections_2025.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
