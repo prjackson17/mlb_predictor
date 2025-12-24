@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import numpy as np
 
-TEAM_ID_MAP = {     # map team id to team name
+TEAM_ID_MAP = {
     108: 'Los Angeles Angels', 109: 'Arizona Diamondbacks', 110: 'Baltimore Orioles',
     111: 'Boston Red Sox', 112: 'Chicago Cubs', 113: 'Cincinnati Reds',
     114: 'Cleveland Guardians', 115: 'Colorado Rockies', 116: 'Detroit Tigers',
@@ -20,23 +21,21 @@ st.set_page_config(page_title="MLB Live Predictor", page_icon="⚾", layout="wid
 
 @st.cache_resource
 def load_assets():
-    model = joblib.load('data/random_forest.pkl')   # random forest model
+    model = joblib.load('data/random_forest.pkl')
     stats = pd.read_csv('data/team_stats.csv')
     return model, stats
 
 
 try:
     model, team_stats = load_assets()
-
 except Exception as e:
     st.error(f"Error loading files: {e}")
     st.stop()
 
-# sort team names
 available_ids = team_stats['team_name'].unique().tolist()
 sorted_ids = sorted(available_ids, key=lambda x: TEAM_ID_MAP.get(int(x), f"Team {x}"))
 
-st.title("⚾ MLB Game Predictor")
+st.title("⚾ Live MLB Win Predictor")
 st.caption("Predictions update automatically as you change teams or weather conditions.")
 st.markdown("---")
 
@@ -56,14 +55,11 @@ with col_b:
 
 with col_c:
     st.subheader("✈️ Away Team")
-    # BLACKOUT LOGIC: Filter the sorted list to remove the home_id
     away_options = [tid for tid in sorted_ids if tid != home_id]
-
     away_id = st.selectbox(
         "Select Away Team",
         options=away_options,
         format_func=lambda x: TEAM_ID_MAP.get(int(x), f"Team {x}"),
-        # Default to the first team in the filtered list
         index=0,
         key="away_sel"
     )
@@ -113,5 +109,57 @@ with st.expander("📊 Analysis: Tale of the Tape"):
     ])
     st.table(comparison.set_index("Team"))
 
-st.sidebar.markdown("---")
-st.sidebar.info(f"Created by [Parker Jackson](https://github.com/prjackson17/)")
+st.markdown("---")
+with st.expander("🎯 2025 Season Simulation Accuracy"):
+    try:
+        proj_df = pd.read_csv('data/projections_2025.csv', index_col=0)
+
+        # 2. Actual results dictionary
+        actual_wins = {
+            'Toronto Blue Jays': 94, 'New York Yankees': 94, 'Boston Red Sox': 89, 'Tampa Bay Rays': 77,
+            'Baltimore Orioles': 75,
+            'Cleveland Guardians': 88, 'Detroit Tigers': 87, 'Kansas City Royals': 82, 'Minnesota Twins': 70,
+            'Chicago White Sox': 60,
+            'Seattle Mariners': 90, 'Houston Astros': 87, 'Texas Rangers': 81, 'Oakland Athletics': 76,
+            'Los Angeles Angels': 72,
+            'Philadelphia Phillies': 96, 'New York Mets': 83, 'Miami Marlins': 79, 'Atlanta Braves': 76,
+            'Washington Nationals': 66,
+            'Milwaukee Brewers': 97, 'Chicago Cubs': 92, 'Cincinnati Reds': 83, 'St. Louis Cardinals': 78,
+            'Pittsburgh Pirates': 71,
+            'Los Angeles Dodgers': 93, 'San Diego Padres': 90, 'San Francisco Giants': 81, 'Arizona Diamondbacks': 80,
+            'Colorado Rockies': 43
+        }
+
+        # 3. Process Data
+        proj_df['Actual Wins'] = proj_df.index.map(actual_wins)
+        proj_df['Error'] = proj_df['Avg_Wins'] - proj_df['Actual Wins']
+        mae = proj_df['Error'].abs().mean()
+
+        # 4. Display Metrics & Table
+        st.write(
+            "Comparing pre-season Monte Carlo simulation results (100k runs) against actual 2025 final win totals.")
+        st.metric("Mean Absolute Error (MAE)", f"{mae:.2f} Wins")
+
+        # Highlight the table with color coding
+        st.dataframe(
+            proj_df[['Avg_Wins', 'Actual Wins', 'Error']].sort_values(by='Error'),
+            use_container_width=True
+        )
+
+    except FileNotFoundError:
+        st.info(
+            "💡 To see 2025 accuracy data here, run your `simulate_2025.py` script locally to generate the "
+            "`projections_2025.csv` file.")
+
+st.markdown("---")
+st.markdown(
+    """
+    <div style="text-align: center;">
+        <p>Developed by <b>Parker Jackson</b></p>
+        <a href="https://github.com/prjackson17/mlb_predictor" target="_blank">
+            <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
